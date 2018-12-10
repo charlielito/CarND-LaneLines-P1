@@ -57,10 +57,12 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap,thickness
                             maxLineGap=max_line_gap)
     line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
 
-    left, left_params, right, right_params = get_left_right_lines(lines, img.shape[1]//2)
-
-    draw_lines(line_img, left, thickness=thickness, color=color)
-    draw_lines(line_img, right, thickness=thickness, color=color)
+    left, left_params, right, right_params = get_left_right_lines2(lines, img.shape[1]//2)
+    
+    if left is not None:
+        draw_lines(line_img, left, thickness=thickness, color=color)
+        draw_lines(line_img, right, thickness=thickness, color=color)
+        
     return line_img, lines
 
 # Python 3 has support for cool math symbols.
@@ -163,7 +165,7 @@ def fit_lines(lines, y_bottom, y_top, x_middle):
         
         return fitted_lines, left, right
     else:
-        return None, None, None, None
+        return None, None, None
 
 def process_image(image):
     # NOTE: The output you return should be a color image (3 channel) for processing video below
@@ -174,7 +176,7 @@ def process_image(image):
 
     # create a CLAHE object (Arguments are optional).
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    gray = clahe.apply(gray)
+    # gray = clahe.apply(gray)
     
     # Define a kernel size and apply Gaussian smoothing
     kernel_size = 9
@@ -223,15 +225,20 @@ def process_image(image):
 
 
     final_line_image = np.zeros((imshape[0], imshape[1], 3), dtype=np.uint8)
-    draw_lines(final_line_image, fitted_lines, color=(0,0,255), thickness=10)
-    final_image = weighted_img(final_line_image, image, α=0.9, β=1., γ=0.)
+
+    # If could not find any images do not do anything
+    if fitted_lines is not None:
+        draw_lines(final_line_image, fitted_lines, color=(0,0,255), thickness=10)
+        final_image = weighted_img(final_line_image, image, α=0.9, β=1., γ=0.)
+    else:
+        final_image = image
 
     return final_image, lines_image
 
 folder = "test_images/"
 test_images = os.listdir(folder)
 white_output = 'test_videos/solidYellowLeft.mp4'
-white_output = 'test_videos/solidWhiteRight.mp4'
+# white_output = 'test_videos/solidWhiteRight.mp4'
 white_output = 'test_videos/challenge.mp4'
 
 for image_name in test_images:
@@ -240,6 +247,9 @@ for image_name in test_images:
     x1, x2 = process_image(image)
     
     cv2.imshow("Result", np.concatenate([x1,x2], axis=1))
+
+    cv2.imwrite("test_images_output/pre_"+image_name, x2)
+    cv2.imwrite("test_images_output/full_"+image_name, x1)
     
     while True:
         if cv2.waitKey(33) == ord('c'):
