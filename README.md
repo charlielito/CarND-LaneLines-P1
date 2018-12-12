@@ -1,56 +1,56 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
-
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
-
-Overview
----
-
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
-
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
-
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
-
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
 
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+**Carlos Andres Alvarez, Udacity Self Driving Nanodegree**
 
-1. Describe the pipeline
+[//]: # (Image References)
 
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
+[image1]: ./test_images/solidYellowCurve2.jpg "Original"
+[image2]: ./test_images_output/pre_solidYellowCurve2.jpg "Pre"
+[image3]: ./test_images_output/full_solidYellowCurve2.jpg "Pos"
 
 
-The Project
----
+### Report
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+### 1. Pipeline description
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
 
-**Step 2:** Open the code in a Jupyter Notebook
+The pipeline consisted of 10 steps: 
+1) The images are converted to grayscale
+2) A Gaussian blur is applied to the image, with kernel 9x9
+3) Use Canny transform to exctract only edges of the image (future lines), with `low_treshold = 50` and `high_threshold = 150`
+4) From that image get a region of interest defined with a four side polygone, where lanes normally are. The bottom coordinates of the polygone are just the corners of the image. The other 2 coordinates are defined as follows: the y-coordinate is the 61% of the height of the image, and the x-coordinates are the 45% and 55% of width of the image respectively.
+5) Use that region of interest to make a mask and perform a bit-wise-and operation with the canny transform image to keep only the information inside that region.
+6) Get all possible lines of that filtered image with the Hough transform, with these parameters: `rho = 2`, `theta = np.pi/180 `, `threshold = 20`, `min_line_length = 10`, `max_line_gap = 10`
+7) Separate the right and left lines by their slope and position in the image. Slopes greater than `0.4` and belonging to the second half of the image correspond to right lane lines, and slopes less than `-0.4` and first half of the image belongs to the left lane lines.
+8) Finally fit with two linear regressions the two group of lines. This returns the equations of the two lane lines.
+9) With the equations, just get 2 points that satisfy each equations. Here we have the `y` coordinates where we want to start and end the lines, i.e the bottom of the image and the starting point of the polygon mask. With that, `x` can be calculated as: `x = (y-b)/m`, where `m` is the slope and `b` the intercept of the linear fit. This returns the final lines that will be displayed on the original image.
+10) Use the final lines to greate a black image with only those lines, and perform a `weighted addition` with the original color image.
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out [Udacity's free course on Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111) to get started.
+The function `draw_lines()` was not modified to keep the code more modular. So that function only does what its name says, draw specified lines. A special function called `get_left_right_lines()` does the trick. It implements the 7th and 8th steps of the pipeline. A function called `fit_lines()` uses this information to calculate the 9th step.
 
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
+Following the main steps of the pipeline can be visualized: Original image -> from 1th to 7th step -> and final steps and returned image.
 
-`> jupyter notebook`
+Original image
+![alt text][image1]
+From 1th to 7th step
+![alt text][image2]
+Final steps and returned image
+![alt text][image3]
 
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
 
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
+### 2. Identify potential shortcomings with your current pipeline
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
 
+One potential shortcoming would be that the pipeline could fail for images with differet contrasts or images with shadows as in the challenge video, because the parameters for the pipeline were fitted  for the normal videos.
+
+Another shortcoming could be the estimation of the linear fit, because of some recognized lines that not belong to the actual lane marks, that estimation could be affected.
+
+
+### 3. Suggest possible improvements to your pipeline
+
+A possible improvement would be to use better parameters to make the pipeline contrast invariant, or use color segmentation or other technique related.
+
+Another potential improvement could be also to take into account big differences of the lines estimation between frames, so this would avoid misleading estimations or no "stable" lines marks. 
+
+Other improvement could be to take previous lines estimation if in the current frame the pipeline fails to detect any lines.
